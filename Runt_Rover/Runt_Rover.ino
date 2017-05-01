@@ -29,8 +29,6 @@
  *        Determine desired motor drive
  *        Update drive to motors
  * 
- * Status:
- * 
  */
 
 #include <SoftwareSerial.h>
@@ -45,8 +43,8 @@
 #define XBEE_COMMAND_TURN_LEFT      1
 #define XBEE_COMMAND_TURN_RIGHT     2
 
-#define FULL_SPEED                  50
-#define TURN_SPEED                  25
+#define FULL_SPEED                  255
+#define TURN_SPEED                  125
 
 #define LEFT_MOTORS                 0
 #define RIGHT_MOTORS                1
@@ -117,6 +115,10 @@ void loop() {
     xbee_command = xbee.read();
     Serial.print("Command = ");
     Serial.println(xbee_command, DEC);
+
+    //debugging
+    xbee_command = XBEE_COMMAND_FORWARD;
+    
     switch(xbee_command)
     {
       case XBEE_COMMAND_STOP:
