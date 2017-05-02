@@ -44,7 +44,7 @@
 #define XBEE_COMMAND_TURN_RIGHT     2
 
 #define FULL_SPEED                  255
-#define TURN_SPEED                  125
+#define TURN_SPEED                  50
 
 #define LEFT_MOTORS                 0
 #define RIGHT_MOTORS                1
@@ -107,9 +107,9 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
     unsigned int i;
-    unsigned int xbee_command;
+    char xbee_command;
 
-    delay(500);    // TODO: Replace this with something more deterministic, perhaps based on a timer.
+    delay(50);    // TODO: Replace this with something more deterministic, perhaps based on a timer.
 
     // read xbee data and update motor states
     xbee_command = xbee.read();
@@ -117,7 +117,16 @@ void loop() {
     Serial.println(xbee_command, DEC);
 
     //debugging
-    xbee_command = XBEE_COMMAND_FORWARD;
+    //xbee_command = XBEE_COMMAND_FORWARD;
+    if(xbee_command == -1)
+    {
+      Serial.println("No data received");
+      xbee_command = XBEE_COMMAND_STOP;
+    }
+    else
+    {
+      xbee_command -= 48;
+    }
     
     switch(xbee_command)
     {
@@ -125,60 +134,70 @@ void loop() {
         // stop position: all off
         motor_state[LEFT_MOTORS] = MOTOR_OFF;
         motor_state[RIGHT_MOTORS] = MOTOR_OFF;
+        Serial.println("xbee command stop");
       break;
 
       case XBEE_COMMAND_FORWARD:
         // forward position: all forward full speed
         motor_state[LEFT_MOTORS] = MOTOR_FORWARD_FULL;
         motor_state[RIGHT_MOTORS] = MOTOR_FORWARD_FULL;
+        Serial.println("xbee command forward");
       break;
 
       case XBEE_COMMAND_FORWARD_LEFT:
         // forward left: left motors forward turn speed, right motors forward full speed
         motor_state[LEFT_MOTORS] = MOTOR_FORWARD_TURN;
         motor_state[RIGHT_MOTORS] = MOTOR_FORWARD_FULL;
+        Serial.println("xbee command forward left");
       break;
       
       case XBEE_COMMAND_FORWARD_RIGHT:
         // forward right: left motors forward full speed, right motors forward turn speed
         motor_state[LEFT_MOTORS] = MOTOR_FORWARD_FULL;
         motor_state[RIGHT_MOTORS] = MOTOR_FORWARD_TURN;
+        Serial.println("xbee command forward right");
       break;
       
       case XBEE_COMMAND_REVERSE:
         // reverse position: all reverse full speed
         motor_state[LEFT_MOTORS] = MOTOR_REVERSE_FULL;
         motor_state[RIGHT_MOTORS] = MOTOR_REVERSE_FULL;
+        Serial.println("xbee command reverse");
       break;
       
       case XBEE_COMMAND_REVERSE_LEFT:
         // reverse left: left motors reverse turn speed, right motors reverse full speed
         motor_state[LEFT_MOTORS] = MOTOR_REVERSE_TURN;
         motor_state[RIGHT_MOTORS] = MOTOR_REVERSE_FULL;
+        Serial.println("xbee command reverse left");
       break;
       
       case XBEE_COMMAND_REVERSE_RIGHT:
         // reverse right: left motors reverse full speed, right motors reverse turn speed
         motor_state[LEFT_MOTORS] = MOTOR_REVERSE_FULL;
         motor_state[RIGHT_MOTORS] = MOTOR_REVERSE_TURN;
+        Serial.println("xbee command reverse right");
       break;
       
       case XBEE_COMMAND_TURN_LEFT:
         // turn left position: left motors reverse full speed, right motors forward full speed
         motor_state[LEFT_MOTORS] = MOTOR_REVERSE_FULL;
         motor_state[RIGHT_MOTORS] = MOTOR_FORWARD_FULL;
+        Serial.println("xbee command turn left");
       break;
       
       case XBEE_COMMAND_TURN_RIGHT:
         // turn right position: left motors forward full speed, right motors reverse full speed
         motor_state[LEFT_MOTORS] = MOTOR_FORWARD_FULL;
         motor_state[RIGHT_MOTORS] = MOTOR_REVERSE_FULL;
+        Serial.println("xbee command turn right");
       break;
 
       default:
         // default is stop: all off
         motor_state[LEFT_MOTORS] = MOTOR_OFF;
         motor_state[RIGHT_MOTORS] = MOTOR_OFF;
+        Serial.println("Xbee command error");
       break;
     }
 
