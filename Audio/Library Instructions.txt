@@ -1,0 +1,1 @@
+Add the WaveHC library to the arduino sketch in the arduino IDE: "Sketch" -> "Include Library" -> "Add .ZIP library..." and selecting the zip.
