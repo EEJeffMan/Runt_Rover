@@ -5,6 +5,7 @@
 #include "WaveUtil.h"
 #include "WaveHC.h"
 
+unsigned int button_debounce(void);
 
 SdReader card;    // This object holds the information for the card
 FatVolume vol;    // This holds the information for the partition on the card
@@ -161,9 +162,74 @@ SIGNAL(TIMER2_OVF_vect) {
 
 void loop() {
 //  byte i;
+  static unsigned int wave_file = 0;
+
+  if(button_debounce())
+  {
+    switch(wave_file++)
+    {
+      case 0:
+        playcomplete("Voice01.WAV");  
+      break;
+       
+      case 1:
+        playcomplete("Voice02.WAV");  
+      break;
+      
+      case 2:
+        playcomplete("Voice03.WAV");  
+      break;
   
-  playcomplete("GB.WAV");  
-  delay(5000);
+      case 3: 
+        playcomplete("Voice04.WAV");  
+      break;
+  
+      case 4: 
+        playcomplete("Voice05.WAV");  
+      break;
+  
+      case 5: 
+        playcomplete("Voice06.WAV");  
+      break;
+  
+      case 6: 
+        playcomplete("Voice07.WAV");  
+      break;
+  
+      case 7:
+        playcomplete("Voice08.WAV");  
+      break;
+  
+      case 8:
+        playcomplete("Voice09.WAV");  
+      break;
+  
+      case 9:
+        playcomplete("Voice10.WAV");  
+      break;
+  
+      case 10:
+        playcomplete("Voice11.WAV");  
+      break;
+  
+      case 11:
+        playcomplete("Voice12.WAV");  
+      break;
+  
+      default:
+        playcomplete("Voice01.WAV");  
+      break;
+    }    
+  }
+
+  //playcomplete("Voice01.WAV");  
+
+  if(wave_file >= 11)
+  {
+    wave_file = 0;
+  }
+  
+  delay(1000);
 
 /*  if (pressed[0]) {
       playcomplete("DO.WAV");
@@ -190,6 +256,41 @@ void loop() {
   }*/
 }
 
+unsigned int button_debounce()
+{
+  // look for button press (button input low), then for a button release (button input high)
+  static unsigned int button_state = 0;
+  unsigned int button_pressed;
+
+  button_pressed = 0;
+
+  if(button_state == 0 && !digitalRead(BTN1))
+  {
+    if(state_count++ >= 3)
+    {
+      button_state = 1;
+      state_count = 0;
+    }
+  }
+  else if(button_state == 1 && digitalRead(BTN1))
+  {
+    if(state_count++ >= 3)
+    {
+      button_state = 0;
+      state_count = 0;
+      button_pressed = 1;
+    }
+  }
+  else
+  {
+    state_count = 0;
+  }
+
+  if(button_pressed)
+    return 1;
+  else
+    return 0;
+}
 
 
 // Plays a full file from beginning to end with no pause.

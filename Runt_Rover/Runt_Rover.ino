@@ -55,6 +55,9 @@
 #define MOTOR_REVERSE_FULL          44
 #define MOTOR_REVERSE_TURN          55
 
+#define BUTTON_MASK                 0x10
+#define JOYSTICK_MASK               0x0F
+
 SoftwareSerial xbee(10,A4);   //RX, TX
 
 /*
@@ -101,6 +104,9 @@ void setup() {
   pinMode(rear_motor_b[LEFT_MOTORS], OUTPUT);
   pinMode(rear_motor_b[RIGHT_MOTORS], OUTPUT);
 
+  pinMode(13, OUTPUT);
+  digitalWrite(13, LOW);
+
   Serial.println("Begin.");
 }
 
@@ -127,8 +133,18 @@ void loop() {
     {
       xbee_command -= 48;
     }
+
+    if(xbee_command & BUTTON_MASK)
+    {
+      Serial.println("Button Press.");
+      digitalWrite(13, HIGH);
+    }
+    else
+    {
+      digitalWrite(13, LOW);
+    }
     
-    switch(xbee_command)
+    switch(xbee_command & JOYSTICK_MASK)
     {
       case XBEE_COMMAND_STOP:
         // stop position: all off
