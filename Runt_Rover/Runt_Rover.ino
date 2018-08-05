@@ -54,6 +54,7 @@
 #define MOTOR_FORWARD_TURN          33
 #define MOTOR_REVERSE_FULL          44
 #define MOTOR_REVERSE_TURN          55
+#define MOTOR_RAMP_STEP             5
 
 #define BUTTON_MASK                 0x10
 #define JOYSTICK_MASK               0x0F
@@ -85,6 +86,8 @@ unsigned int front_motor_en[2] = {3, 5};
 unsigned int rear_motor_en[2] = {9, 6};
 
 unsigned int motor_state[2];
+int motor_drive_target[2];
+int motor_drive_present[2];
 
 void setup() {
   // put your setup code here, to run once:
@@ -217,9 +220,29 @@ void loop() {
       break;
     }
 
-    // read motor states and drive motors
+    // read motor states and drive motors    
     for(i = 0; i < 2; i++)
     {
+      if (abs(motor_drive_present[i] - motor_drive_target[i]) < 7)
+      {
+        // if close to target, set to target
+        motor_drive_present[i] = motor_drive_target[i];
+      }
+      else
+      {
+        // move PWM closer to target
+        if (motor_drive_present[i] > motor_drive_target[i])
+        {
+          // PWM is greater than target, decrease PWM
+          motor_drive_present[i] -= MOTOR_RAMP_STEP;
+        }
+        else
+        {
+          // PWM is less than target, increase PWM
+          motor_drive_present[i] += MOTOR_RAMP_STEP;    
+        }
+      }
+      
       switch(motor_state[i])
       {
         // drive motors: forward: a = high, b = low; reverse: a = low, b = high; off: both low
@@ -230,6 +253,7 @@ void loop() {
           digitalWrite(rear_motor_b[i], LOW);
           analogWrite(front_motor_en[i], 0);
           analogWrite(rear_motor_en[i], 0);
+          motor_drive_present[i] = 0;
         break;
 
         case MOTOR_FORWARD_FULL:
@@ -237,8 +261,11 @@ void loop() {
           digitalWrite(front_motor_b[i], LOW);
           digitalWrite(rear_motor_a[i], HIGH);
           digitalWrite(rear_motor_b[i], LOW);
-          analogWrite(front_motor_en[i], FULL_SPEED);
-          analogWrite(rear_motor_en[i], FULL_SPEED);
+          //analogWrite(front_motor_en[i], FULL_SPEED);
+          //analogWrite(rear_motor_en[i], FULL_SPEED);
+          analogWrite(front_motor_en[i], motor_drive_present[i]);
+          analogWrite(rear_motor_en[i], motor_drive_present[i]);
+          motor_drive_target[i] = FULL_SPEED;
         break;
 
         case MOTOR_FORWARD_TURN:
@@ -248,6 +275,7 @@ void loop() {
           digitalWrite(rear_motor_b[i], LOW);
           analogWrite(front_motor_en[i], TURN_SPEED);
           analogWrite(rear_motor_en[i], TURN_SPEED);
+          motor_drive_target[i] = TURN_SPEED;
         break;
 
         case MOTOR_REVERSE_FULL:
@@ -255,8 +283,11 @@ void loop() {
           digitalWrite(front_motor_b[i], HIGH);
           digitalWrite(rear_motor_a[i], LOW);
           digitalWrite(rear_motor_b[i], HIGH);
-          analogWrite(front_motor_en[i], FULL_SPEED);
-          analogWrite(rear_motor_en[i], FULL_SPEED);
+          //analogWrite(front_motor_en[i], FULL_SPEED);
+          //analogWrite(rear_motor_en[i], FULL_SPEED);
+          analogWrite(front_motor_en[i], motor_drive_present[i]);
+          analogWrite(rear_motor_en[i], motor_drive_present[i]);          
+          motor_drive_target[i] = FULL_SPEED;
         break;
 
         case MOTOR_REVERSE_TURN:
@@ -266,6 +297,7 @@ void loop() {
           digitalWrite(rear_motor_b[i], HIGH);
           analogWrite(front_motor_en[i], TURN_SPEED);
           analogWrite(rear_motor_en[i], TURN_SPEED);
+          motor_drive_target[i] = TURN_SPEED;
         break;
 
         default:
@@ -275,6 +307,7 @@ void loop() {
           digitalWrite(rear_motor_b[i], LOW);
           analogWrite(front_motor_en[i], 0);
           analogWrite(rear_motor_en[i], 0);
+          motor_drive_target[i] = 0;
         break;
       }
     }
