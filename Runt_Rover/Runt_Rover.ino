@@ -44,7 +44,7 @@
 #define XBEE_COMMAND_TURN_RIGHT     2
 
 #define FULL_SPEED                  255
-#define TURN_SPEED                  50
+#define TURN_SPEED                  25
 
 #define LEFT_MOTORS                 0
 #define RIGHT_MOTORS                1
@@ -54,7 +54,8 @@
 #define MOTOR_FORWARD_TURN          33
 #define MOTOR_REVERSE_FULL          44
 #define MOTOR_REVERSE_TURN          55
-#define MOTOR_RAMP_STEP             5
+#define MOTOR_RAMP_STEP             25
+#define MOTOR_RAMP_THHRESHOLD       50
 
 #define BUTTON_MASK                 0x10
 #define JOYSTICK_MASK               0x0F
@@ -223,7 +224,7 @@ void loop() {
     // read motor states and drive motors    
     for(i = 0; i < 2; i++)
     {
-      if (abs(motor_drive_present[i] - motor_drive_target[i]) < 7)
+      if (abs(motor_drive_present[i] - motor_drive_target[i]) < MOTOR_RAMP_THHRESHOLD)
       {
         // if close to target, set to target
         motor_drive_present[i] = motor_drive_target[i];
