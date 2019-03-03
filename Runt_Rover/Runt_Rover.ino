@@ -54,7 +54,9 @@
 #define MOTOR_FORWARD_TURN          33
 #define MOTOR_REVERSE_FULL          44
 #define MOTOR_REVERSE_TURN          55
-#define MOTOR_RAMP_STEP             25
+
+#define MOTOR_RAMP_STEP             5
+#define LOOP_DELAY_MS				50
 #define MOTOR_RAMP_THHRESHOLD       50
 
 #define BUTTON_MASK                 0x10
@@ -87,8 +89,11 @@ unsigned int front_motor_en[2] = {3, 5};
 unsigned int rear_motor_en[2] = {9, 6};
 
 unsigned int motor_state[2];
-int motor_drive_target[2];
-int motor_drive_present[2];
+unsigned int motor_drive_target[2];
+unsigned int motor_drive_present[2];
+
+void set_motor_states (unsigned int command);
+unsigned int set_motor_outputs (unsigned int mode);
 
 void setup() {
   // put your setup code here, to run once:
@@ -119,7 +124,7 @@ void loop() {
     unsigned int i;
     char xbee_command;
 
-    delay(50);    // TODO: Replace this with something more deterministic, perhaps based on a timer.
+    delay(LOOP_DELAY);
 
     // read xbee data and update motor states
     xbee_command = xbee.read();
@@ -148,7 +153,41 @@ void loop() {
       digitalWrite(13, LOW);
     }
     
-    switch(xbee_command & JOYSTICK_MASK)
+	set_motor_states(xbee_command & JOYSTICK_MASK);
+	
+    // read motor states and drive motors    
+    for(i = 0; i < 2; i++)
+    { 
+	  motor_drive_target[i] = set_motor_outputs(motor_state[i]);
+	  
+	  if (abs(motor_drive_present[i] - motor_drive_target[i]) < MOTOR_RAMP_THHRESHOLD)
+      {
+        // if close to target, set to target, to reduce jitter
+        motor_drive_present[i] = motor_drive_target[i];
+      }
+      else
+      {
+        // move PWM closer to target
+        if (motor_drive_present[i] > motor_drive_target[i])
+        {
+          // PWM is greater than target, decrease PWM
+          motor_drive_present[i] -= MOTOR_RAMP_STEP;
+        }
+        else
+        {
+          // PWM is less than target, increase PWM
+          motor_drive_present[i] += MOTOR_RAMP_STEP;    
+        }
+      }
+	  
+	  analogWrite(front_motor_en[i], motor_drive_present[i]);
+	  analogWrite(rear_motor_en[i], motor_drive_present[i]);
+    }
+}
+
+void set_motor_states (unsigned int command)
+{
+    switch(command)
     {
       case XBEE_COMMAND_STOP:
         // stop position: all off
@@ -219,97 +258,83 @@ void loop() {
         motor_state[RIGHT_MOTORS] = MOTOR_OFF;
         Serial.println("Xbee command error");
       break;
-    }
-
-    // read motor states and drive motors    
-    for(i = 0; i < 2; i++)
-    {
-      if (abs(motor_drive_present[i] - motor_drive_target[i]) < MOTOR_RAMP_THHRESHOLD)
-      {
-        // if close to target, set to target
-        motor_drive_present[i] = motor_drive_target[i];
-      }
-      else
-      {
-        // move PWM closer to target
-        if (motor_drive_present[i] > motor_drive_target[i])
-        {
-          // PWM is greater than target, decrease PWM
-          motor_drive_present[i] -= MOTOR_RAMP_STEP;
-        }
-        else
-        {
-          // PWM is less than target, increase PWM
-          motor_drive_present[i] += MOTOR_RAMP_STEP;    
-        }
-      }
-      
-      switch(motor_state[i])
-      {
-        // drive motors: forward: a = high, b = low; reverse: a = low, b = high; off: both low
-        case MOTOR_OFF:
-          digitalWrite(front_motor_a[i], LOW);
-          digitalWrite(front_motor_b[i], LOW);
-          digitalWrite(rear_motor_a[i], LOW);
-          digitalWrite(rear_motor_b[i], LOW);
-          analogWrite(front_motor_en[i], 0);
-          analogWrite(rear_motor_en[i], 0);
-          motor_drive_present[i] = 0;
-        break;
-
-        case MOTOR_FORWARD_FULL:
-          digitalWrite(front_motor_a[i], HIGH);
-          digitalWrite(front_motor_b[i], LOW);
-          digitalWrite(rear_motor_a[i], HIGH);
-          digitalWrite(rear_motor_b[i], LOW);
-          //analogWrite(front_motor_en[i], FULL_SPEED);
-          //analogWrite(rear_motor_en[i], FULL_SPEED);
-          analogWrite(front_motor_en[i], motor_drive_present[i]);
-          analogWrite(rear_motor_en[i], motor_drive_present[i]);
-          motor_drive_target[i] = FULL_SPEED;
-        break;
-
-        case MOTOR_FORWARD_TURN:
-          digitalWrite(front_motor_a[i], HIGH);
-          digitalWrite(front_motor_b[i], LOW);
-          digitalWrite(rear_motor_a[i], HIGH);
-          digitalWrite(rear_motor_b[i], LOW);
-          analogWrite(front_motor_en[i], TURN_SPEED);
-          analogWrite(rear_motor_en[i], TURN_SPEED);
-          motor_drive_target[i] = TURN_SPEED;
-        break;
-
-        case MOTOR_REVERSE_FULL:
-          digitalWrite(front_motor_a[i], LOW);
-          digitalWrite(front_motor_b[i], HIGH);
-          digitalWrite(rear_motor_a[i], LOW);
-          digitalWrite(rear_motor_b[i], HIGH);
-          //analogWrite(front_motor_en[i], FULL_SPEED);
-          //analogWrite(rear_motor_en[i], FULL_SPEED);
-          analogWrite(front_motor_en[i], motor_drive_present[i]);
-          analogWrite(rear_motor_en[i], motor_drive_present[i]);          
-          motor_drive_target[i] = FULL_SPEED;
-        break;
-
-        case MOTOR_REVERSE_TURN:
-          digitalWrite(front_motor_a[i], LOW);
-          digitalWrite(front_motor_b[i], HIGH);
-          digitalWrite(rear_motor_a[i], LOW);
-          digitalWrite(rear_motor_b[i], HIGH);
-          analogWrite(front_motor_en[i], TURN_SPEED);
-          analogWrite(rear_motor_en[i], TURN_SPEED);
-          motor_drive_target[i] = TURN_SPEED;
-        break;
-
-        default:
-          digitalWrite(front_motor_a[i], LOW);
-          digitalWrite(front_motor_b[i], LOW);
-          digitalWrite(rear_motor_a[i], LOW);
-          digitalWrite(rear_motor_b[i], LOW);
-          analogWrite(front_motor_en[i], 0);
-          analogWrite(rear_motor_en[i], 0);
-          motor_drive_target[i] = 0;
-        break;
-      }
-    }
+    }	
 }
+
+unsigned int set_motor_outputs (unsigned int mode)
+{
+  unsigned int target_out;
+	
+  switch(mode)
+  {
+	// drive motors: forward: a = high, b = low; reverse: a = low, b = high; off: both low
+	case MOTOR_OFF:
+	  digitalWrite(front_motor_a[i], LOW);
+	  digitalWrite(front_motor_b[i], LOW);
+	  digitalWrite(rear_motor_a[i], LOW);
+	  digitalWrite(rear_motor_b[i], LOW);
+	  //analogWrite(front_motor_en[i], 0);
+	  //analogWrite(rear_motor_en[i], 0);
+	  //motor_drive_present[i] = 0;
+	  target_out = 0;
+	break;
+
+	case MOTOR_FORWARD_FULL:
+	  digitalWrite(front_motor_a[i], HIGH);
+	  digitalWrite(front_motor_b[i], LOW);
+	  digitalWrite(rear_motor_a[i], HIGH);
+	  digitalWrite(rear_motor_b[i], LOW);
+	  //analogWrite(front_motor_en[i], FULL_SPEED);
+	  //analogWrite(rear_motor_en[i], FULL_SPEED);
+	  //analogWrite(front_motor_en[i], motor_drive_present[i]);
+	  //analogWrite(rear_motor_en[i], motor_drive_present[i]);
+	  target_out = FULL_SPEED;
+	break;
+
+	case MOTOR_FORWARD_TURN:
+	  digitalWrite(front_motor_a[i], HIGH);
+	  digitalWrite(front_motor_b[i], LOW);
+	  digitalWrite(rear_motor_a[i], HIGH);
+	  digitalWrite(rear_motor_b[i], LOW);
+	  //analogWrite(front_motor_en[i], TURN_SPEED);
+	  //analogWrite(rear_motor_en[i], TURN_SPEED);
+	  target_out = TURN_SPEED;
+	break;
+
+	case MOTOR_REVERSE_FULL:
+	  digitalWrite(front_motor_a[i], LOW);
+	  digitalWrite(front_motor_b[i], HIGH);
+	  digitalWrite(rear_motor_a[i], LOW);
+	  digitalWrite(rear_motor_b[i], HIGH);
+	  //analogWrite(front_motor_en[i], FULL_SPEED);
+	  //analogWrite(rear_motor_en[i], FULL_SPEED);
+	  //analogWrite(front_motor_en[i], motor_drive_present[i]);
+	  //analogWrite(rear_motor_en[i], motor_drive_present[i]);          
+	  target_out = FULL_SPEED;
+	break;
+
+	case MOTOR_REVERSE_TURN:
+	  digitalWrite(front_motor_a[i], LOW);
+	  digitalWrite(front_motor_b[i], HIGH);
+	  digitalWrite(rear_motor_a[i], LOW);
+	  digitalWrite(rear_motor_b[i], HIGH);
+	  //analogWrite(front_motor_en[i], TURN_SPEED);
+	  //analogWrite(rear_motor_en[i], TURN_SPEED);
+	  target_out = TURN_SPEED;
+	break;
+
+	default:
+	  digitalWrite(front_motor_a[i], LOW);
+	  digitalWrite(front_motor_b[i], LOW);
+	  digitalWrite(rear_motor_a[i], LOW);
+	  digitalWrite(rear_motor_b[i], LOW);
+	  //analogWrite(front_motor_en[i], 0);
+	  //analogWrite(rear_motor_en[i], 0);
+	  target_out = 0;
+	break;
+  }	
+  
+  return target_out;
+}
+
+//
